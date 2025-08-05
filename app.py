@@ -1,45 +1,58 @@
-from flask import Flask, request, jsonify, render_template
-import pickle
+import streamlit as st
 import numpy as np
+import pickle
 
-app = Flask(__name__)
-
-# Load trained model and PCA
-with open('model.pkl', 'rb') as f:
+# Load model
+with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
-with open('pca.pkl', 'rb') as f:
+# Load PCA
+with open("pca.pkl", "rb") as f:
     pca = pickle.load(f)
 
-@app.route('/')
-def home():
-    return render_template('index.html')  # Optional: use this for browser input
+st.title("Google Playstore App Rating Predictor")
 
-@app.route('/predict', methods=['POST'])
-def predict():
+st.write(
+    """
+    This app predicts the rating of a Google Play Store app based on its attributes.
+    """
+)
+
+# Example features you might have trained on:
+# please update these to match your model
+category = st.number_input("Category (as number encoded)", min_value=0.0)
+reviews = st.number_input("Reviews")
+size = st.number_input("Size (in MB)")
+installs = st.number_input("Installs")
+type_ = st.number_input("Type (0=Free, 1=Paid)")
+price = st.number_input("Price (0 if free)")
+content_rating = st.number_input("Content Rating (encoded)")
+genres = st.number_input("Genres (encoded)")
+last_updated = st.number_input("Last Updated (numerical)")
+current_ver = st.number_input("Current Version (numerical)")
+android_ver = st.number_input("Android Version (numerical)")
+
+if st.button("Predict Rating"):
     try:
-        # Get data (from form or JSON)
-        data = request.form if request.form else request.get_json()
+        features = np.array(
+            [
+                category,
+                reviews,
+                size,
+                installs,
+                type_,
+                price,
+                content_rating,
+                genres,
+                last_updated,
+                current_ver,
+                android_ver,
+            ]
+        ).reshape(1, -1)
 
-        # Example expected keys: ['Category', 'Reviews', 'Size', 'Installs', 'Type', 'Price', 'Content_Rating', 'Genres', 'Last_Updated', 'Current_Ver', 'Android_Ver']
-        # Assume frontend or preprocessor converts these to numerical values
-        feature_keys = ['Category', 'Reviews', 'Size', 'Installs', 'Type', 'Price', 'Content_Rating', 
-                        'Genres', 'Last_Updated', 'Current_Ver', 'Android_Ver']  # Update based on your model
-
-        # Convert input to float in correct order
-        features = [float(data[key]) for key in feature_keys]
-        input_array = np.array([features])
-
-        # Apply PCA transformation
-        input_pca = pca.transform(input_array)
-
-        # Predict rating
-        predicted_rating = model.predict(input_pca)[0]
-
-        return jsonify({'predicted_rating': round(predicted_rating, 2)})
+        features_pca = pca.transform(features)
+        prediction = model.predict(features_pca)[0]
+        st.success(f"Predicted App Rating: {round(prediction, 2)} ⭐️")
 
     except Exception as e:
-        return jsonify({'error': str(e)})
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        st.error(f"Error: {str(e)}")
