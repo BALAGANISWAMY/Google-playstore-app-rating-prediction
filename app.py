@@ -2,37 +2,43 @@ import streamlit as st
 import pickle
 import numpy as np
 
-# Load model and PCA
-with open("model.pkl", "rb") as f:
-    model = pickle.load(f)
+# Load the model and PCA
+with open("model.pkl", "rb") as model_file:
+    model = pickle.load(model_file)
 
-with open("pca.pkl", "rb") as f:
-    pca = pickle.load(f)
+with open("pca.pkl", "rb") as pca_file:
+    pca = pickle.load(pca_file)
 
-st.title("Google Play Store App Rating Prediction")
+# Streamlit UI
+st.title("📱 Google Play Store App Rating Prediction")
 
-st.write("Enter app features below:")
+st.write("🔢 Enter the following features below. Only numeric values should be used.")
 
-# Only include 9 fields (as used in training)
-category = st.number_input("Category (numeric)", min_value=0.0, step=1.0)
-reviews = st.number_input("Reviews", min_value=0.0, step=1.0)
-size = st.number_input("Size (MB)", min_value=0.0, step=0.1)
-installs = st.number_input("Installs", min_value=0.0, step=1000.0)
+# Only include 9 inputs as PCA was trained on 9 features
+category = st.number_input("Category (encoded)", step=1.0)
+reviews = st.number_input("Number of Reviews", step=100.0)
+size = st.number_input("App Size (in MB)", step=0.1)
+installs = st.number_input("Installs (total downloads)", step=1000.0)
 type_ = st.number_input("Type (Free=0, Paid=1)", min_value=0.0, max_value=1.0, step=1.0)
-price = st.number_input("Price", min_value=0.0, step=0.01)
-content_rating = st.number_input("Content Rating (numeric)", min_value=0.0, step=1.0)
-genres = st.number_input("Genres (numeric)", min_value=0.0, step=1.0)
-android_ver = st.number_input("Android Version", min_value=0.0, step=0.1)
+price = st.number_input("Price (₹)", step=0.1)
+content_rating = st.number_input("Content Rating (encoded)", step=1.0)
+genres = st.number_input("Genres (encoded)", step=1.0)
+android_ver = st.number_input("Minimum Android Version (e.g. 4.1)", step=0.1)
 
+# Predict button
 if st.button("Predict Rating"):
     try:
-        # Only pass 9 features
-        input_features = np.array([[category, reviews, size, installs, type_,
-                                    price, content_rating, genres, android_ver]])
-        
-        input_pca = pca.transform(input_features)
-        prediction = model.predict(input_pca)[0]
-        st.success(f"Predicted Rating: {round(prediction, 2)}")
+        # Create input array
+        input_data = np.array([[category, reviews, size, installs, type_,
+                                price, content_rating, genres, android_ver]])
+
+        # Apply PCA
+        transformed_data = pca.transform(input_data)
+
+        # Predict
+        prediction = model.predict(transformed_data)[0]
+
+        st.success(f"🌟 Predicted App Rating: {round(prediction, 2)}")
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"❌ Error: {e}")
